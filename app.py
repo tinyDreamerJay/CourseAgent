@@ -210,12 +210,16 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 for role,text in st.session_state.history:
-    st.write(f"**{role}**: {text}")
+    if role == "工具":
+        st.info(text)
+    else :
+        st.write(f"**{role}**: {text}")
 
 user_input = st.text_input("请输入你的问题: ")
 
 if st.button("发送") and user_input:
-    messages = [{"role": r,"content": t} for r,t in st.session_state.history]
+    st.session_state.history.append(("user",user_input))
+    messages = [{"role": r,"content": t} for r,t in st.session_state.history if r != "工具"]
     messages.append({"role": "user","content": user_input})
     try:
         with st.spinner("头脑风暴中..."):
@@ -233,12 +237,18 @@ if st.button("发送") and user_input:
                 fn_args = json.loads(tool_call.function.arguments)
                 fn = available_functions.get(fn_name)
                 result = fn(**fn_args) if fn else "工具不存在"
+
                 messages.append({
                     "role":"tool",
                     "tool_call_id": tool_call.id,
                     "content": result
                 })
+                st.session_state.history.append((
+                    "工具",
+                    f"调用{fn_name}({fn_args})\n\n返回:{result}"
+                ))
                 st.info(f"调用工具：{fn_name}({fn_args})")
+
             with st.spinner("正在整理结果..."):
                 resp2 = client.chat.completions.create(
                     model=MODEL_CHAT,
@@ -248,7 +258,6 @@ if st.button("发送") and user_input:
         else:
             answer = msg.content
 
-        st.session_state.history.append(("user",user_input))
         st.session_state.history.append(("assistant",answer))
         st.success(answer)
 
