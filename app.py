@@ -1,4 +1,5 @@
 import streamlit as st
+from rag import retrieve_knowledge,build_knowledge_base
 from openai import OpenAI
 from dotenv import load_dotenv
 from datetime import datetime
@@ -22,7 +23,9 @@ embed_client = OpenAI(
 
 MODEL_CHAT = os.getenv("MODEL_CHAT", "deepseek-flash")
 MODEL_EMBEDDING = os.getenv("MODEL_EMBEDDING", "embedding-3")
+
 init_db()
+build_knowledge_base()
 
 st.set_page_config(page_title="课程复习助手Agent")
 st.title("课程复习助手Agent")
@@ -170,6 +173,27 @@ tools = [
                 "required":["plan_id"]
             }
         }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"retrieve_knowledge",
+            "description":"当用户询问某个概念的定义、原理、区别时调用，简单闲聊或与课程无关的问题不需要调用",
+            "parameters":{
+                "type":"object",
+                "properties":{
+                    "query":{
+                        "type":"string",
+                        "description":"用户提出的问题内容"
+                    },
+                    "top_k":{
+                        "type":"integer",
+                        "description":"返回几段相关知识，默认 3"
+                    }
+                },
+                "required":["query"]
+            }
+        }
     }
 ]
 
@@ -178,7 +202,8 @@ available_functions = {
     "get_schedule" : get_schedule,
     "generate_plan":generate_plan,
     "get_plan": get_plan,
-    "update_plan":update_plan
+    "update_plan":update_plan,
+    "retrieve_knowledge":retrieve_knowledge
 }
 
 if "history" not in st.session_state:
