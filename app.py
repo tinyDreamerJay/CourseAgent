@@ -25,11 +25,25 @@ MODEL_CHAT = os.getenv("MODEL_CHAT", "deepseek-flash")
 MODEL_EMBEDDING = os.getenv("MODEL_EMBEDDING", "embedding-3")
 
 init_db()
-build_knowledge_base()
+kb_status = build_knowledge_base()
 
-st.set_page_config(page_title="课程复习助手Agent")
+st.set_page_config(
+    page_title="课程复习助手Agent",
+    page_icon="📚",
+    layout="wide"
+)
+
 st.title("课程复习助手Agent")
-st.write("当前已接入工具:算剩余天数、查课表、生成复习计划、查历史计划、修改计划。")
+st.write("当前已接入工具:算剩余天数、查课表、生成复习计划、查历史计划、修改计划、知识点检索。")
+
+with st.sidebar:
+    st.header("系统信息")
+    st.write(f"对话模型:{MODEL_CHAT}")
+    st.write(f"向量模型:{MODEL_EMBEDDING}")
+    st.write(f"知识库：{kb_status}")
+    if st.button("清空对话"):
+        st.session_state.history.clear()
+        st.rerun()
 
 def calculate_days(exam_date: str) -> str:
     """计算距离考试日期还有多少天。exam_date 格式:YYYY-MM-DD"""
@@ -213,11 +227,12 @@ for role,text in st.session_state.history:
     if role == "工具":
         st.info(text)
     else :
-        st.write(f"**{role}**: {text}")
+        with st.chat_message(role):
+            st.write(text)
 
-user_input = st.text_input("请输入你的问题: ")
+user_input = st.chat_input("请输入你的问题: ")
 
-if st.button("发送") and user_input:
+if user_input:
     st.session_state.history.append(("user",user_input))
     messages = [{"role": r,"content": t} for r,t in st.session_state.history if r != "工具"]
     messages.append({"role": "user","content": user_input})
